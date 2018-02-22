@@ -18,6 +18,10 @@ def overlay_text(imfile, coord, text, output=None, font=None, color=None, show=F
         overlay_text('path/to/image.jpg', [(40,10), (80,120)], ['1st coords', '2nd coords'], font=myfont)
 
     """
+    if type(coord)!=list or type(text)!=list:
+        raise TypeError('coord and text must be lists')
+    if len(coord)!=len(text):
+        raise ValueError('coord and text must have same length')
     from PIL import Image, ImageDraw, ImageFont
     # Read image file and create drawing object
     im = Image.open(imfile)
