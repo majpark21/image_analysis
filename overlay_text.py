@@ -1,4 +1,4 @@
-def overlay_text(imfile, coord, text, output=None, font=None, color=None, show=False):
+def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=None, color=None, show=False):
     """"Read image file, add text at specified positions and save.
 
     Args:
@@ -6,6 +6,7 @@ def overlay_text(imfile, coord, text, output=None, font=None, color=None, show=F
         coord (list of 2-tuple): Coordinates (x,y) where text is written.
         text (list of str): Text to be written.
         output(str, optional): Path to save the image with overlayed text. Defaults to imfile with 'ovl_' prefix.
+        shift_coord (list of 2 int): Shift for text.
         font (ImageFont object, optional): Font of text. Defaults to arial, 12pt.
         color (n-tuple, optional): Color of text. Should have same length as the number of channels in image. Defaults
         to black.
@@ -36,6 +37,7 @@ def overlay_text(imfile, coord, text, output=None, font=None, color=None, show=F
         default_col = {'L':0, 'RGB':(0,0,0)}
         color = default_col[im.mode]
     # Add text and save
+    coord = [(i[0]+shift_coord[0], i[1]+shift_coord[1]) for i in coord]
     for xy, txt in zip(coord, text):
         imdraw.text(xy, txt, font = font, fill = color)
     im.save(output)

@@ -1,4 +1,13 @@
 def read_csv_track(csvfi):
+    """Export content csv file with track info to a dictionary.
+
+    Args:
+        csvfi (str): path to csv file which contains the track informations. A header must be present with columns:
+        'Image_Metadata_T' (time), 'track_id', 'objNuclei_Location_Center_X' and 'objNuclei_Location_Center_Y'.
+    Returns:
+        A dictionary of depth 2. 1st keys refer to time, 2nd keys refers to track ID. Values are (x,y) coordinates.
+
+    """
     import csv
     # 2-level dictionary
     # 1stKey: time;
