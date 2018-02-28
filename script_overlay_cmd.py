@@ -1,3 +1,16 @@
+# Script usage:
+#
+# python3 path/to/script_overlay_cmd.py work_fold subfold_csv subfold_png subfold_out
+#
+# work_fold: working directory, must comprises 3 subfolders, one with .csv tables, one with .png images and one to write output
+# subfold_csv: subfolder of "work_fold", containing one .csv files ending by _tracks.csv
+# subfold_png: subfolder of "work_fold", containing images to annotate with .png extension
+# subfold_out: subfolder of "work_fold", annotated images will be saved there.
+# Work with Python 3, not 2!
+
+# ---------------------------------
+
+
 import os, sys, csv, re
 from PIL import Image, ImageDraw, ImageFont
 
@@ -38,7 +51,7 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
         text (list of str): Text to be written.
         output(str, optional): Path to save the image with overlayed text. Defaults to imfile with 'ovl_' prefix.
         shift_coord (list of 2 int): Shift for text.
-        font (ImageFont object, optional): Font of text. Defaults to arial, 12pt.
+        font (ImageFont object, optional): Font of text. Defaults to arial, 12pt (Windows only).
         color (n-tuple, optional): Color of text. Should have same length as the number of channels in image. Defaults
         to black.
         show (bool, optional): Whether to display the annotated image. Defaults to False.
@@ -60,8 +73,8 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
     # Set defaults
     if output is None:
         output = 'ovl_'+imfile
-    #if font is None:
-    #    font = ImageFont.truetype(font='arial', size=12)
+    if font is None:
+        font = ImageFont.truetype(font='arial', size=12)
     if color is None:
         # Default to black for grayscale('L') or RGB
         default_col = {'L':0, 'RGB':(0,0,0)}
@@ -85,9 +98,9 @@ if __name__ == "__main__":
     else:
         raise OSError('No default text font for the OS (only Windows and Linux have a default value).'
                       'Please modify the present script file in the following way:'
-                      '1) remove this exception raise; 2) define a variable "myfont" which points to a path with a '
-                      'correct font file on your system. You can use the lines right (Windows and Linux) above'
-                      ' as a template.')
+                      '1) remove or comment this exception raise;'
+                      '2) define a variable "myfont" which points to a path with a correct font file on your system.'
+                      'You can use the lines right (Windows and Linux) above as a template.')
     shift = (-4, -5)
     # Read arguments
     # 1)working directory, 2)subfolder with tracks .csv, 3)subfolder with .png, 4)subfolder to output result
