@@ -1,5 +1,3 @@
-# TODO: check PREVIOUS button, add a quit button
-
 library(tcltk)
 suppressMessages(library(data.table))
 library(ggplot2)
@@ -35,16 +33,35 @@ myWindow <- function(){
                       command = function(){set(dt.out, i, 2L, "yes"); tkdestroy(win)})
   butnotOUT<- ttkbutton(win, text = "NOT an Outlier", width = -6,
                       command = function(){set(dt.out, i, 2L, "no"); tkdestroy(win)})
+  # -2 since the while loop is -1
   butPREV<- ttkbutton(win, text = "Back to previous", width = -6,
-                      command = function(){output <<- output[1:(length(output)-1)]; tkdestroy(win)})
-  tkgrid(butOUT, butnotOUT, butPREV)
+                      command = function(){i <<- i-2L ; tkdestroy(win)})
+  butSAVEQUIT <- ttkbutton(win, text = "Save and quit", width = -6,
+                      command = function(){
+                        filename <- tclvalue(tkgetSaveFile())
+                        if (!nchar(filename)) {
+                          tkmessageBox(message = "No file was selected!")
+                        } else {
+                          tkmessageBox(message = paste("The file selected was", filename))
+                        }
+                       write.csv(x = dt.out, file = paste0(filename, ".csv"), quote = FALSE)
+                       tkdestroy(win)
+                       stoploop <<- TRUE
+                      })
+  tkgrid(butOUT, butnotOUT, butPREV, butSAVEQUIT)
   tkwait.window(win)
 }
 
 
-for(i in 1:nrow(dt.out)){
+#while(i <= nrow(dt.out)){
+i <- 1L
+stoploop <- FALSE
+while(i <= 5L){
+  print(i)
   plot(whole.plot +
     geom_line(data = dt[uniqID==dt.out[i, uniqID]], aes(x=RealTime, y=Ratio_ERK), col = 'red', size = 2))
-  Sys.sleep(1)
+  Sys.sleep(0.75)
   myWindow()
+  if(stoploop) break
+  i <- i + 1L
 }
