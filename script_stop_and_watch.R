@@ -59,10 +59,28 @@ myWindow <- function(){
   tkwait.window(win)
 }
 
+endWindow <- function(){
+  win <- tktoplevel()
+  tktitle(win) <- "You have reached the end of the file, now save your data by pressing the button."
+  butSAVEQUIT <- ttkbutton(win, text = "Save and quit", width = -24,
+                           command = function(){
+                             filename <- tclvalue(tkgetSaveFile())
+                             if (!nchar(filename)) {
+                               tkmessageBox(message = "No file was selected!")
+                             } else {
+                               tkmessageBox(message = paste("The file selected was", filename))
+                             }
+                             write.csv(x = dt.out, file = paste0(filename, ".csv"), quote = FALSE)
+                             tkdestroy(win)
+                           })
+  tkgrid(butSAVEQUIT)
+  tkwait.window(win)
+}
+
 
 stoploop <- FALSE
 #while(i <= nrow(dt.out)){
-while(i <= 5L){
+while(i <= 3L){
   print(i)
   plot(whole.plot +
     geom_line(data = dt[uniqID==dt.out[i, uniqID]], aes(x=RealTime, y=Ratio_ERK), col = 'red', size = 2))
@@ -70,4 +88,9 @@ while(i <= 5L){
   myWindow()
   if(stoploop) break
   i <- i + 1L
+}
+
+# if script didn't stop because of pressing "save and quit"
+if(!stoploop){
+  endWindow()
 }
