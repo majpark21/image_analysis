@@ -2,6 +2,13 @@ library(tcltk)
 suppressMessages(library(data.table))
 library(ggplot2)
 
+# At which trajectory to start, useul if you stopped in the middle of a dataset and want to 
+# come back to it
+i <- 1L
+# Increase if GUI appears before the plot
+sleep.time <- 0.75
+
+
 # Read Input
 dt <- fread(input = "tCoursesSelected.csv")
 dt <- dt[Well==4, .(Well, Image_Metadata_Site, objNuc_TrackObjects_Label,
@@ -53,14 +60,13 @@ myWindow <- function(){
 }
 
 
-#while(i <= nrow(dt.out)){
-i <- 1L
 stoploop <- FALSE
+#while(i <= nrow(dt.out)){
 while(i <= 5L){
   print(i)
   plot(whole.plot +
     geom_line(data = dt[uniqID==dt.out[i, uniqID]], aes(x=RealTime, y=Ratio_ERK), col = 'red', size = 2))
-  Sys.sleep(0.75)
+  Sys.sleep(sleep.time)
   myWindow()
   if(stoploop) break
   i <- i + 1L
