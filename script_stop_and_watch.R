@@ -1,9 +1,9 @@
 #rm(list=ls())
 # Path to file to read
-filetoread = "mod_tCoursesSelected.csv"
-col.uniqID = "myID"
-col.time = "RealTime"
-col.whatoplot = c("objNuc_Intensity_MeanIntensity_imNucCorrBg", "objCell_AreaShape_Area", "objCell_AreaShape_EulerNumber")
+filetoread = "subset_100/condition1.csv"
+col.uniqID = "track_id"
+col.time = "Image_Metadata_T"
+col.whatoplot = c("objNuclei_Intensity_MeanIntensity_imKTR", "objCytoRing_Intensity_MeanIntensity_imKTR", "objCells_Intensity_MeanIntensity_imKTR")
 
 # At which trajectory to start, useul if you stopped in the middle of a dataset and want to 
 # come back to it
