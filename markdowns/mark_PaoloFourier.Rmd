@@ -9,11 +9,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Data loading
 
+The sub40 folder contains only high-quality time series: they are complete (i.e. going from time 0 to 243 without break) and potential missing values were imputed via linear interpolation. Each file corresponds to a different cell treatment.
+
 Start with WT cells, stimulated with EGF 1 ng/mL.
 
 ```{r}
 library(data.table)
 library(ggplot2)
+library(plyr)
+library(stringr)
 dt <- fread("/home/marc/Dropbox/Work/image_analysis/data/paolo/sub40/condition2.csv")
 head(dt)
 
@@ -44,3 +48,67 @@ ggplot(dt_freqProfile, aes(x=freq, y=spec)) +
   scale_y_continuous(labels = scales::scientific)
 ```
 
+
+## Repeat for all condtions and compare mean Fourir profiles
+
+### Load all data
+
+```{r}
+# Clean workspace
+rm(dt, dt_freq, dt_freqProfile, dt_melt)
+
+# Efficiently read all CSVs and combine in a single data.table
+path <- "/home/marc/Dropbox/Work/image_analysis/data/paolo/sub40/"
+files <- paste0(path, list.files(path))
+dt <- as.data.table(rbind.fill(lapply(files, fread, header=TRUE)))
+rm(files, path)
+```
+
+Make a table of correspondance well <--> human readable treatment.
+
+```{r}
+dt_treatment <- dt[, .(Image_Metadata_Well, condAll)]
+setkey(dt_treatment, "Image_Metadata_Well")
+dt_treatment <- unique(dt_treatment)
+dt_treatment[, Mutation := str_extract(condAll, "_[A-Z0-9\\-/]+?_")][, Mutation := substr(Mutation, 2, nchar(Mutation)-1)]
+dt_treatment[, EGF := str_detect(condAll, "EGF_1")]
+dt_treatment$EGF <- ifelse(dt_treatment$EGF, "+EGF", "")
+dt_treatment[, Condition := paste0(Mutation, EGF)]
+setnames(dt_treatment, "Image_Metadata_Well", "Well")
+dt_treatment <- dt_treatment[, .(Well, Condition)]
+```
+
+### Fourier profile
+
+```{r}
+dt_freq <- dt[, .(freq = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$freq,
+                  spec = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$spec),
+                  by = uniqID]
+dt_freq[, Well := str_sub(uniqID, 1 , 2)]
+dt_freqProfile <- dt_freq[, .(mean.spec = mean(spec), median.spec = median(spec)), by = .(Well,freq)]
+# Human readable condition
+dt_freqProfile <- merge(dt_freqProfile, dt_treatment, by = "Well")
+```
+
+#### Mean profile
+
+```{r fig.height=12}
+ggplot(dt_freqProfile, aes(x=freq, y=mean.spec)) +
+  geom_col() +
+  facet_wrap(~Condition, scales = "free", ncol = 2) +
+  scale_y_continuous(labels = scales::scientific) + 
+  scale_x_continuous(limits = c(0,0.2)) +
+  theme(text = element_text(size=20))
+```
+```
+
+#### Median profile
+
+```{r fig.height=12}
+ggplot(dt_freqProfile, aes(x=freq, y=median.spec)) +
+  geom_col() +
+  facet_wrap(~Condition, scales = "free", ncol = 2) +
+  scale_y_continuous(labels = scales::scientific) + 
+  scale_x_continuous(limits = c(0,0.2)) +
+    theme(text = element_text(size=20))
+```
