@@ -1,7 +1,7 @@
 #rm(list=ls())
 # Path to file to read
-filetoread = "subset_100/condition1.csv"
-col.uniqID = "track_id"
+filetoread = "/home/marc/Dropbox/Work/image_analysis/data/paolo/sub40/condition1.csv"
+col.uniqID = "uniqID"
 col.time = "Image_Metadata_T"
 col.whatoplot = c("objNuclei_Intensity_MeanIntensity_imKTR", "objCytoRing_Intensity_MeanIntensity_imKTR", "objCells_Intensity_MeanIntensity_imKTR")
 
@@ -11,7 +11,7 @@ i <- 1L
 # Increase if GUI appears before the plot
 sleep.time <- 0.75
 # Number of trajectories to plot (selected at random, lower to speed up plotting)
-in.ntraj <- 20
+in.ntraj <- 40
 
 
 # ----------------------------
@@ -78,7 +78,7 @@ endWindow <- function(){
                              } else {
                                tkmessageBox(message = paste("The file selected was", filename))
                              }
-                             write.csv(x = dt.out, file = paste0(filename, ".csv"), quote = FALSE)
+                             write.csv(x = dt.out, file = paste0(filename, ".csv"), quote = FALSE, row.names = F)
                              tkdestroy(win)
                            })
   tkgrid(butSAVEQUIT)
@@ -87,8 +87,8 @@ endWindow <- function(){
 
 
 stoploop <- FALSE
-#while(i <= nrow(dt.out)){
-while(i <= 3L){
+while(i <= nrow(dt.out)){
+#while(i <= 3L){
   print(i)
   plot(whole.plot +
          geom_line(data = dt[get(col.uniqID)==dt.out[i, get(col.uniqID)]], aes(x=get(col.time), y=value), col = 'red', size = 2))

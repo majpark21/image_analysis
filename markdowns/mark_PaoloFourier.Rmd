@@ -1,0 +1,46 @@
+---
+title: "Paolo Mean Fourier Profile"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data loading
+
+Start with WT cells, stimulated with EGF 1 ng/mL.
+
+```{r}
+library(data.table)
+library(ggplot2)
+dt <- fread("/home/marc/Dropbox/Work/image_analysis/data/paolo/sub40/condition2.csv")
+head(dt)
+
+# Default ggplot theme
+theme_set(theme_bw())
+
+col_fluo <- colnames(dt)[c(7,8,11:14)]
+dt_melt <- melt(dt, measure.vars = col_fluo)
+ggplot(dt_melt, aes(x=Image_Metadata_T, y=value)) +
+  geom_line(aes(group=uniqID)) +
+  facet_wrap(~variable, ncol = 2, scales = "free") +
+  stat_summary(fun.y = "mean", geom = "line", col = "blue", size = 1.3)
+```
+
+## Mean Fourier Profile
+
+```{r}
+dt_freq <- dt[, .(freq = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$freq,
+                  spec = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$spec),
+                  by = uniqID]
+
+dt_freqProfile <- dt_freq[, .(spec = mean(spec)), by = freq]
+```
+
+```{r}
+ggplot(dt_freqProfile, aes(x=freq, y=spec)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::scientific)
+```
+
