@@ -32,7 +32,7 @@ ggplot(dt_melt, aes(x=Image_Metadata_T, y=value)) +
   stat_summary(fun.y = "mean", geom = "line", col = "blue", size = 1.3)
 ```
 
-## Mean Fourier Profile
+## Mean Power Profile
 
 ```{r}
 dt_freq <- dt[, .(freq = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$freq,
@@ -48,8 +48,25 @@ ggplot(dt_freqProfile, aes(x=freq, y=spec)) +
   scale_y_continuous(labels = scales::scientific)
 ```
 
+## Trajectoy associated with frequency profile
 
-## Repeat for all condtions and compare mean Fourir profiles
+data.table cannot handle complex numbers so go to for loop
+
+```{r}
+v.ID <- unique(dt$uniqID)
+# Matrix which contain the Fourier transform for each trajectory
+init.mat <- matrix(0+0i, ncol = length(unique(dt$Image_Metadata_T)), nrow = length(v.ID))
+for(i in 1:length(v.ID)){
+  ID <- v.ID[i]
+  init.mat[i,] <- fft(dt[uniqID==ID, objNuclei_Intensity_MeanIntensity_imKTR])
+}
+mean.profile <- colMeans(init.mat)
+mean.traj <- Re(fft(mean.profile, inverse = T))
+plot(mean.traj, type="l")
+```
+
+
+## Repeat for all condtions and compare mean Power profiles
 
 ### Load all data
 
@@ -78,7 +95,7 @@ setnames(dt_treatment, "Image_Metadata_Well", "Well")
 dt_treatment <- dt_treatment[, .(Well, Condition)]
 ```
 
-### Fourier profile
+### Power profile
 
 ```{r}
 dt_freq <- dt[, .(freq = spectrum(objNuclei_Intensity_MeanIntensity_imKTR, plot=FALSE)$freq,
@@ -100,7 +117,7 @@ ggplot(dt_freqProfile, aes(x=freq, y=mean.spec)) +
   scale_x_continuous(limits = c(0,0.2)) +
   theme(text = element_text(size=20))
 ```
-```
+
 
 #### Median profile
 
@@ -112,3 +129,60 @@ ggplot(dt_freqProfile, aes(x=freq, y=median.spec)) +
   scale_x_continuous(limits = c(0,0.2)) +
     theme(text = element_text(size=20))
 ```
+
+Frequencies of the peak:
+
+```{r}
+dt_topfreq <- dt_freqProfile[, .(median.spec = tail(sort(median.spec),3)), by=Condition]
+dt_topfreq <- merge(dt_topfreq, dt_freqProfile, by="median.spec", all.y = F)
+dt_topfreq[, c("Condition.y", "Well") := list(NULL, NULL)]
+setkey(dt_topfreq, "Condition.x", "median.spec")
+setcolorder(dt_topfreq, c("Condition.x", "freq", "median.spec", "mean.spec"))
+# TO CHECK: if fqctor 2 the right thing to do to switch to period?
+dt_topfreq[, period := 1/(2*freq)]
+dt_topfreq
+```
+
+
+
+#### Mean trajectoy in time space
+
+```{r fig.height=12}
+dt_melt <- melt(dt, measure.vars = "objNuclei_Intensity_MeanIntensity_imKTR")
+dt_melt[, Well := str_sub(uniqID, 1, 2)]
+dt_melt <- merge(dt_melt, dt_treatment, by = "Well")
+
+ggplot(dt_melt, aes(x=Image_Metadata_T, y=value)) +
+  geom_line(aes(group=uniqID)) + 
+  facet_wrap(~Condition, ncol=2, scales = "free") +
+  stat_summary(fun.y="mean", geom="line", col="blue", size=2)
+```
+
+Can't see much.
+
+#### Get mean profile in frequency space and reconstruct corresponding trajectory in time space
+
+data.table cannot handle complex numbers so go to for loop.
+
+```{r fig.height=12}
+setkey(dt, uniqID)
+v.ID <- unique(dt$uniqID)
+# Matrix which contain the Fourier transform for each trajectory
+init.mat <- matrix(0+0i, ncol = length(unique(dt$Image_Metadata_T)), nrow = length(v.ID))
+for(i in 1:length(v.ID)){
+  ID <- v.ID[i]
+  init.mat[i,] <- fft(dt[uniqID==ID, objNuclei_Intensity_MeanIntensity_imKTR])
+}
+
+# Each group of 40 rows is related to a condition
+par(mfrow=c(7,2))
+for(i in seq(1, nrow(init.mat), by = 40)){
+  mean.profile <- colMeans(init.mat[i:(i+39),])
+  mean.traj <- Re(fft(mean.profile, inverse = T))
+  mean.traj <- mean.traj / length(mean.traj)
+  plot(mean.traj, type="l", main = dt_treatment[Well==str_sub(v.ID[i], 1, 2), Condition])
+}
+
+```
+
+Looks like this recover the mean trajectories that are found in time space. Levels are shifted.
