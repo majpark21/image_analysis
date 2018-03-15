@@ -1,0 +1,22 @@
+Dropbox/Work/image_analysis/data_with_format/
+├── out_0001
+│   ├── meanIntKTR [50 entries exceeds filelimit, not opening dir]
+│   ├── out_crop
+│   ├── out_ovl [50 entries exceeds filelimit, not opening dir]
+│   ├── segmented [50 entries exceeds filelimit, not opening dir]
+│   └── tables
+│       ├── objNuclei.csv
+│       ├── objNuclei_WellC2_S00_conn.csv
+│       ├── objNuclei_WellC2_S00_seq.csv
+│       └── objNuclei_WellC2_S00_tracks.csv
+└── out_0002
+    ├── meanIntKTR [50 entries exceeds filelimit, not opening dir]
+    ├── out_ovl
+    ├── segmented [50 entries exceeds filelimit, not opening dir]
+    └── tables
+        ├── objNuclei.csv
+        ├── objNuclei_WellC3_S00_conn.csv
+        ├── objNuclei_WellC3_S00_seq.csv
+        └── objNuclei_WellC3_S00_tracks.csv
+
+11 directories, 8 files
