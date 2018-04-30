@@ -26,7 +26,8 @@ if __name__ == "__main__":
         if re.search('_tracks\.csv', file):
             tracks = read_csv_track(in_tracks + '/' + file)
             break
-    for image in os.listdir(in_im):
+    image_list = [f for f in os.listdir(in_im) if re.search('\.png$', f)]
+    for image in image_list:
         time = re.search('T[0-9]+\.png$', image).group()[1:-4]
         cell_x, cell_y = tracks[time][in_trackid]
         cell_x, cell_y = int(cell_x), int(cell_y)
