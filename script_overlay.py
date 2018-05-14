@@ -1,6 +1,6 @@
 # Script usage:
 #
-# python3 path/to/script_overlay_cmd.py work_fold subfold_csv subfold_png subfold_out
+# python3 path/to/script_overlay.py work_fold subfold_csv subfold_png subfold_out
 #
 # work_fold: working directory, must comprises 3 subfolders, one with .csv tables, one with .png images and one to write output
 # subfold_csv: subfolder of "work_fold", containing one .csv files ending by _tracks.csv
