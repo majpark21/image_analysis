@@ -14,12 +14,13 @@
 import os, sys, csv, re, argparse
 from PIL import Image, ImageDraw, ImageFont
 
-def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xpos_col = 'objNuclei_Location_Center_X', ypos_col = 'objNuclei_Location_Center_Y'):
+
+def read_csv_track(csvfi, time_col, id_col, xpos_col, ypos_col):
     """Export content csv file with track info to a dictionary.
 
     Args:
-        csvfi (str): path to csv file which contains the track informations. A header must be present with columns (default names):
-        'Image_Metadata_T' (time), 'track_id', 'objNuclei_Location_Center_X' and 'objNuclei_Location_Center_Y'.
+        csvfi (str): path to csv file which contains the track information. A header must be present with columns for:
+        time, track id, position in x and position in y.
         time_col (str): name of time column.
         id_col (str): name of track id column.
         xpos_col (str): name of x-position column.
@@ -35,9 +36,9 @@ def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xp
         if time_col in fl and id_col in fl and xpos_col in fl and ypos_col in fl:
             pass
         else:
-            raise ValueError('At least one of the provided column name is not found in the first line of the csv file. \
-             Expected: ' + ', '.join([time_col, id_col, xpos_col, ypos_col]) +
-            "; Found: " + ', '.join(fl))
+            raise ValueError('At least one of the provided column name is not found in the first line of the csv file. Expected: ' +
+                             ', '.join([time_col, id_col, xpos_col, ypos_col]) +
+                             "; Found: " + ', '.join(fl))
           
     # 2-level dictionary
     # 1stKey: time;
@@ -113,7 +114,7 @@ def parseArguments_overlay():
     parser = argparse.ArgumentParser()
 
     # Positional mandatory arguments
-    parser.add_argument('in_wd', help='Working directory, must comprises 3 subfolders, one with .csv tables, \
+    parser.add_argument('in_wd', help='Working directory, must comprise 3 subfolders, one with .csv tables, \
      one with .png images and one to write output.', type=str)
     parser.add_argument('in_tracks', help='Subfolder of "in_wd", containing one .csv file ending by "_tracks.csv".',
                         type=str)
@@ -173,7 +174,11 @@ if __name__ == "__main__":
     # Match name of the file that ends with _tracks.csv
     for file in os.listdir(args.in_tracks):
         if re.search('_tracks\.csv', file):
-            tracks = read_csv_track(args.in_tracks + '/' + file)
+            tracks = read_csv_track(csvfi=args.in_tracks + '/' + file,
+                                    time_col=args.time,
+                                    id_col=args.id,
+                                    xpos_col=args.xpos,
+                                    ypos_col=args.ypos)
             break
 
     # Identify right image and annotate it
