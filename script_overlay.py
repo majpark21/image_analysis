@@ -11,7 +11,7 @@
 # ---------------------------------
 
 
-import os, sys, csv, re
+import os, sys, csv, re, argparse
 from PIL import Image, ImageDraw, ImageFont
 
 def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xpos_col = 'objNuclei_Location_Center_X', ypos_col = 'objNuclei_Location_Center_Y'):
@@ -35,8 +35,8 @@ def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xp
         if time_col in fl and id_col in fl and xpos_col in fl and ypos_col in fl:
             pass
         else:
-            raise ValueError('At least one of the provided column name is not found in the first line of the csv file. Expected: ' + \
-            ', '.join([time_col, id_col, xpos_col, ypos_col]) + \
+            raise ValueError('At least one of the provided column name is not found in the first line of the csv file. \
+             Expected: ' + ', '.join([time_col, id_col, xpos_col, ypos_col]) +
             "; Found: " + ', '.join(fl))
           
     # 2-level dictionary
@@ -57,7 +57,7 @@ def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xp
 # ---------------------------------
 
 
-def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=None, color=None, show=False):
+def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, color=None, show=False):
     """"Read image file, add text at specified positions and save.
 
     Args:
@@ -78,10 +78,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
         overlay_text('path/to/image.jpg', [(40,10), (80,120)], ['1st coords', '2nd coords'], font=myfont)
 
     """
-    if type(coord)!=list or type(text)!=list:
+    if type(coord) != list or type(text) != list:
         raise TypeError('coord and text must be lists')
-    if len(coord)!=len(text):
+    if len(coord) != len(text):
         raise ValueError('coord and text must have same length')
+    if shift_coord is None:
+        shift_coord = [0, 0]
     # Read image file and create drawing object
     im = Image.open(imfile)
     imdraw = ImageDraw.Draw(im)
@@ -92,12 +94,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
         font = ImageFont.truetype(font='arial', size=12)
     if color is None:
         # Default to black for grayscale('L') or RGB
-        default_col = {'L':0, 'RGB':(0,0,0)}
+        default_col = {'L': 0, 'RGB': (0, 0, 0)}
         color = default_col[im.mode]
     # Add text and save
     coord = [(i[0]+shift_coord[0], i[1]+shift_coord[1]) for i in coord]
     for xy, txt in zip(coord, text):
-        imdraw.text(xy, txt, font = font, fill = color)
+        imdraw.text(xy, txt, font=font, fill=color)
     im.save(output)
     if show:
         im.show()
@@ -105,29 +107,79 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
 
 # -----------------------------
 
+
+def parseArguments_overlay():
+    # Create argument parser
+    parser = argparse.ArgumentParser()
+
+    # Positional mandatory arguments
+    parser.add_argument('in_wd', help='Working directory, must comprises 3 subfolders, one with .csv tables, \
+     one with .png images and one to write output.', type=str)
+    parser.add_argument('in_tracks', help='Subfolder of "in_wd", containing one .csv file ending by "_tracks.csv".',
+                        type=str)
+    parser.add_argument('in_im', help='Subfolder of "in_wd", containing images to annotate with .png extension. Name of\
+                                      the files must end by "T[0-9]+.png", to indicate time of the image.', type=str)
+    parser.add_argument('in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str)
+
+    # Optional arguments
+    parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
+                        default='Image_Metadata_T')
+    parser.add_argument('-i', '--id', help='Name of track ID column in _tracks.csv file.', type=str,
+                        default='track_id')
+    parser.add_argument('-x', '--xpos', help='Name of x-position column in _tracks.csv file.', type=str,
+                        default='objNuclei_Location_Center_X')
+    parser.add_argument('-y', '--ypos', help='Name of y-position column in _tracks.csv file.', type=str,
+                        default='objNuclei_Location_Center_Y')
+    parser.add_argument('-s', '--shift', help='Shift the position of the writing. Useful to center writings in cells. \
+     Provide as 2 integers separated by a white space.',
+                        nargs=2, type=int, default=(-4, -5))
+
+    # Parse arguments
+    args = parser.parse_args()
+    args.shift = tuple(args.shift)
+
+    return args
+
+
+# -----------------------------
+
+
 if __name__ == "__main__":
     if sys.platform == 'Windows':
         myfont = ImageFont.truetype(font='ARIALNB.TTF', size=10)
+    elif sys.platform == 'linux':
+        myfont = ImageFont.truetype(font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', size=10)
     else:
-        raise OSError('No default text font for the OS (only Windows has a default value).'
+        raise OSError('No default text font for the OS (only Windows and Linux have a default value).'
                       'Please modify the present script file in the following way:'
                       '1) remove or comment this exception raise;'
                       '2) define a variable "myfont" which points to a path with a correct font file on your system.'
-                      'You can use the lines right above as a template.')
-    shift = (-4, -5)
+                      'You can use the lines right (Windows and Linux) above as a template.')
+
     # Read arguments
-    # 1)working directory, 2)subfolder with tracks .csv, 3)subfolder with .png, 4)subfolder to output result
-    in_wd, in_tracks, in_im, in_out = sys.argv[1:]
-    os.chdir(in_wd)
+    args = parseArguments_overlay()
+
+    # Raw print arguments
+    print("You are running the script with arguments: ")
+    for a in args.__dict__:
+        print(str(a) + ": " + str(args.__dict__[a]))
+
+    os.chdir(args.in_wd)
+    # If output folder does not exist, create it
+    if not os.path.exists(args.in_out):
+        print('Creating output directory: ' + args.in_wd + args.in_out)
+        os.makedirs(args.in_out)
+
     # Match name of the file that ends with _tracks.csv
-    for file in os.listdir(in_tracks):
+    for file in os.listdir(args.in_tracks):
         if re.search('_tracks\.csv', file):
-            tracks = read_csv_track(in_tracks + '/' + file)
+            tracks = read_csv_track(args.in_tracks + '/' + file)
             break
+
     # Identify right image and annotate it
-    for image in os.listdir(in_im):
+    for image in os.listdir(args.in_im):
         time = re.search('T[0-9]+\.png$', image).group()[1:-4]
         relevant_tracks = tracks[time]
-        overlay_text(in_im + '/' + image, coord=list(relevant_tracks.values()),
-                 text=list(relevant_tracks.keys()), color=(255, 255, 255), output=in_out + '/ovl_' + image,
-                 shift_coord=shift, font=myfont)
+        overlay_text(args.in_im + '/' + image, coord=list(relevant_tracks.values()),
+                 text=list(relevant_tracks.keys()), color=(255, 255, 255), output=args.in_out + '/ovl_' + image,
+                 shift_coord=args.shift, font=myfont)
