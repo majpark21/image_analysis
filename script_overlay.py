@@ -14,16 +14,31 @@
 import os, sys, csv, re
 from PIL import Image, ImageDraw, ImageFont
 
-def read_csv_track(csvfi):
+def read_csv_track(csvfi, time_col = 'Image_Metadata_T', id_col = 'track_id', xpos_col = 'objNuclei_Location_Center_X', ypos_col = 'objNuclei_Location_Center_Y'):
     """Export content csv file with track info to a dictionary.
 
     Args:
-        csvfi (str): path to csv file which contains the track informations. A header must be present with columns:
+        csvfi (str): path to csv file which contains the track informations. A header must be present with columns (default names):
         'Image_Metadata_T' (time), 'track_id', 'objNuclei_Location_Center_X' and 'objNuclei_Location_Center_Y'.
+        time_col (str): name of time column.
+        id_col (str): name of track id column.
+        xpos_col (str): name of x-position column.
+        ypos_col (str): name of y-position column.
     Returns:
         A dictionary of depth 2. 1st keys refer to time, 2nd keys refers to track ID. Values are (x,y) coordinates.
 
     """
+    # Check if headers are present on the first line
+    with open(csvfi, newline='') as csvfile:
+        first_line = csvfile.readline().rstrip()
+        fl = first_line.split(',')
+        if time_col in fl and id_col in fl and xpos_col in fl and ypos_col in fl:
+            pass
+        else:
+            raise ValueError('At least one of the provided column name is not found in the first line of the csv file. Expected: ' + \
+            ', '.join([time_col, id_col, xpos_col, ypos_col]) + \
+            "; Found: " + ', '.join(fl))
+          
     # 2-level dictionary
     # 1stKey: time;
     # 2nd key: track_id;
@@ -32,11 +47,11 @@ def read_csv_track(csvfi):
     with open(csvfi, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            if row['Image_Metadata_T'] in dict_track.keys():
-                dict_track[row['Image_Metadata_T']][row['track_id']] = (float(row['objNuclei_Location_Center_X']), float(row['objNuclei_Location_Center_Y']))
+            if row[time_col] in dict_track.keys():
+                dict_track[row[time_col]][row[id_col]] = (float(row[xpos_col]), float(row[ypos_col]))
             else:
-                dict_track[row['Image_Metadata_T']] = {}
-                dict_track[row['Image_Metadata_T']][row['track_id']] = (float(row['objNuclei_Location_Center_X']), float(row['objNuclei_Location_Center_Y']))
+                dict_track[row[time_col]] = {}
+                dict_track[row[time_col]][row[id_col]] = (float(row[xpos_col]), float(row[ypos_col]))
     return dict_track
 
 # ---------------------------------
@@ -93,14 +108,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord = [0,0], font=Non
 if __name__ == "__main__":
     if sys.platform == 'Windows':
         myfont = ImageFont.truetype(font='ARIALNB.TTF', size=10)
-    elif sys.platform == 'linux':
-        myfont = ImageFont.truetype(font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', size=10)
     else:
-        raise OSError('No default text font for the OS (only Windows and Linux have a default value).'
+        raise OSError('No default text font for the OS (only Windows has a default value).'
                       'Please modify the present script file in the following way:'
                       '1) remove or comment this exception raise;'
                       '2) define a variable "myfont" which points to a path with a correct font file on your system.'
-                      'You can use the lines right (Windows and Linux) above as a template.')
+                      'You can use the lines right above as a template.')
     shift = (-4, -5)
     # Read arguments
     # 1)working directory, 2)subfolder with tracks .csv, 3)subfolder with .png, 4)subfolder to output result
