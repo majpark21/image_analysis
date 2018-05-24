@@ -11,37 +11,96 @@
 
 # ---------------------------------
 
-import os, sys, re
+import os, sys, re, argparse
 from script_overlay import read_csv_track
 from PIL import Image
 
+
+def parseArguments_crop():
+    # Create argument parser
+    parser = argparse.ArgumentParser()
+
+    # Positional mandatory arguments
+    parser.add_argument('in_wd', help='Working directory, must comprise 3 subfolders, one with .csv tables, \
+     one with .png images and one to write output.', type=str)
+    parser.add_argument('in_tracks', help='Subfolder of "in_wd", containing one .csv file ending by "_tracks.csv".',
+                        type=str)
+    parser.add_argument('in_im', help='Subfolder of "in_wd", containing images to annotate with .png extension. Name of\
+                                      the files must end by "T[0-9]+.png", to indicate time of the image.', type=str)
+    parser.add_argument('in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str)
+    parser.add_argument('in_trackid', help='ID of the tracks to crop. Must correspond to entry in the column "track_id"\
+     in the csv table. Several IDs can be provided, separated by white space', nargs='+', type=str)
+
+    # Optional arguments for reading track file
+    parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
+                        default='Image_Metadata_T')
+    parser.add_argument('-i', '--id', help='Name of track ID column in _tracks.csv file.', type=str,
+                        default='track_id')
+    parser.add_argument('-x', '--xpos', help='Name of x-position column in _tracks.csv file.', type=str,
+                        default='objNuclei_Location_Center_X')
+    parser.add_argument('-y', '--ypos', help='Name of y-position column in _tracks.csv file.', type=str,
+                        default='objNuclei_Location_Center_Y')
+    parser.add_argument('-s', '--size', help='Define the size around the area of the cell center to crop. Must be \
+     specify as 4 integers separated by a white space. Each integer give length of crop in direction: left, right, top,\
+     bottom respectively.', nargs=4, type=int, default=(25, 25, 25, 25))
+
+    # Parse arguments
+    args = parser.parse_args()
+    args.size = tuple(args.size)
+
+    return args
+
+
+# -------------------------------
+
+
 if __name__ == "__main__":
-    # Length of cropping frame left, right, top, bottom
-    crop_l, crop_r, crop_t, crop_b = 25, 25, 25, 25
     # Read arguments
-    # 1)working directory, 2)subfolder with tracks .csv, 3)subfolder with .png, 4)subfolder to output result 5)IDtotrack
-    in_wd, in_tracks, in_im, in_out, in_trackid = sys.argv[1:]
-    os.chdir(in_wd)
-    for file in os.listdir(in_tracks):
+    args = parseArguments_crop()
+    # Length of cropping frame left, right, top, bottom
+    crop_l, crop_r, crop_t, crop_b = args.size
+
+    # Raw print arguments
+    print("You are running the script with arguments: ")
+    for a in args.__dict__:
+        print(str(a) + ": " + str(args.__dict__[a]))
+
+    os.chdir(args.in_wd)
+    # If output folder does not exist, create it
+    if not os.path.exists(args.in_out):
+        print('Creating output directory: ' + args.in_wd + args.in_out)
+        os.makedirs(args.in_out)
+
+    for file in os.listdir(args.in_tracks):
         if re.search('_tracks\.csv', file):
-            tracks = read_csv_track(in_tracks + '/' + file)
+            tracks = read_csv_track(csvfi=args.in_tracks + '/' + file,
+                                    time_col=args.time,
+                                    id_col=args.id,
+                                    xpos_col=args.xpos,
+                                    ypos_col=args.ypos)
             break
-    image_list = [f for f in os.listdir(in_im) if re.search('\.png$', f)]
+
+    image_list = [f for f in os.listdir(args.in_im) if re.search('\.png$', f)]
     for image in image_list:
-        time = re.search('T[0-9]+\.png$', image).group()[1:-4]
-        cell_x, cell_y = tracks[time][in_trackid]
-        cell_x, cell_y = int(cell_x), int(cell_y)
-        im = Image.open(in_im+image)
-        # Check if position + radius do not exceed size of the image
-        # Right, left, top, bottom
-        w, h = im.size
-        if cell_x + crop_r > w:
-            crop_r = w - cell_x
-        if cell_x - crop_l < 1:
-            crop_l = cell_x - 1
-        if cell_y + crop_b > h:
-            crop_b = h - cell_y
-        if cell_y - crop_t < 1:
-            crop_t = cell_y - 1
-        im.crop((cell_x-crop_l, cell_y-crop_t,
-                 cell_x+crop_r, cell_y+crop_b)).save(in_out + in_trackid + '_' + image)
+        time = re.search('T[0-9]+\.png$', image).group()[1:-4]  # trim T and .png extension
+        for track_id in args.in_trackid:
+            # If track id is not found, skip and go on with the other IDs
+            if track_id not in tracks[time]:
+                print('Track ID: ' + track_id + ' not found at time: ' + time)
+                continue
+            cell_x, cell_y = tracks[time][track_id]
+            cell_x, cell_y = int(cell_x), int(cell_y)
+            im = Image.open(args.in_im+image)
+            # Check if position + radius do not exceed size of the image
+            # Right, left, top, bottom
+            w, h = im.size
+            if cell_x + crop_r > w:
+                crop_r = w - cell_x
+            if cell_x - crop_l < 1:
+                crop_l = cell_x - 1
+            if cell_y + crop_b > h:
+                crop_b = h - cell_y
+            if cell_y - crop_t < 1:
+                crop_t = cell_y - 1
+            im.crop((cell_x-crop_l, cell_y-crop_t,
+                     cell_x+crop_r, cell_y+crop_b)).save(args.in_out + track_id + '_' + image)
