@@ -111,16 +111,18 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
 
 def parseArguments_overlay():
     # Create argument parser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Overlay track labels on top of images using LAP output.')
 
-    # Positional mandatory arguments
+    # Positional mandatory arguments for command line arguments (except if config file is provided)
     parser.add_argument('in_wd', help='Working directory, must comprise 3 subfolders, one with .csv tables, \
-     one with .png images and one to write output.', type=str)
+     one with .png images and one to write output.', type=str, default=None, nargs='?')
     parser.add_argument('in_tracks', help='Subfolder of "in_wd", containing one .csv file ending by "_tracks.csv".',
-                        type=str)
+                        type=str, default=None, nargs='?')
     parser.add_argument('in_im', help='Subfolder of "in_wd", containing images to annotate with .png extension. Name of\
-                                      the files must end by "T[0-9]+.png", to indicate time of the image.', type=str)
-    parser.add_argument('in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str)
+                                      the files must end by "T[0-9]+.png", to indicate time of the image.', type=str,
+                        default=None, nargs='?')
+    parser.add_argument('in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str,
+                        default=None, nargs='?')
 
     # Optional arguments
     parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
@@ -135,11 +137,57 @@ def parseArguments_overlay():
      Provide as 2 integers separated by a white space.',
                         nargs=2, type=int, default=(-4, -5))
 
+    # If provided a config file, replaces command line arguments
+    parser.add_argument('-c', '--config', help='Path to config file, replaces positional arguments.', type=str,
+                        default=None)
+
     # Parse arguments
     args = parser.parse_args()
+
+    if args.config is not None:
+        args = read_config(args.config)
+        # Remove unused parameters
+        entriesToRemove = ('file_cpout', 'file_suffix_1line', 'column_well', 'column_site', 'column_objnum',
+                           'min_track_length')
+        for k in entriesToRemove:
+            args.pop(k, None)
+        # Update names to match the ones expected by the parser
+        args['in_wd'] = args.pop('path_wd')
+        args['in_tracks'] = args.pop('dir_lapout')
+        args['in_im'] = args.pop('dir_segmented')
+        args['in_out'] = args.pop('dir_overlay')
+        args['time'] = args.pop('column_frame')
+        args['id'] = args.pop('column_trackid')
+        args['xpos'] = args.pop('column_posx')
+        args['ypos'] = args.pop('column_posy')
+        args['shift'] = args.pop('overlay_shift')
+        # Convert from string to tuple
+        from ast import literal_eval
+        args['shift'] = literal_eval(args['shift'])
+
+        # Make dictionary entries indexable with .XXX notation, consistent with parser
+        class Struct:
+            def __init__(self, **entries):
+                self.__dict__.update(entries)
+        args = Struct(**args)
+        return args
+
+    # If passed from command line, go from list to tuple
     args.shift = tuple(args.shift)
 
     return args
+
+
+# -----------------------------
+
+
+def read_config(file, param_col='parameter', value_col='value'):
+    dict_args = {}
+    with open(file, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            dict_args[row[param_col]] = row[value_col]
+    return dict_args
 
 
 # -----------------------------
@@ -186,5 +234,5 @@ if __name__ == "__main__":
         time = re.search('T[0-9]+\.png$', image).group()[1:-4]
         relevant_tracks = tracks[time]
         overlay_text(args.in_im + '/' + image, coord=list(relevant_tracks.values()),
-                 text=list(relevant_tracks.keys()), color=(255, 255, 255), output=args.in_out + '/ovl_' + image,
-                 shift_coord=args.shift, font=myfont)
+                     text=list(relevant_tracks.keys()), color=(255, 255, 255), output=args.in_out + '/ovl_' + image,
+                     shift_coord=args.shift, font=myfont)
