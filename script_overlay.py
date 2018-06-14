@@ -230,7 +230,8 @@ if __name__ == "__main__":
             break
 
     # Identify right image and annotate it
-    for image in os.listdir(args.in_im):
+    image_list = [f for f in os.listdir(args.in_im) if re.search('\.png$', f)]
+    for image in image_list:
         time = re.search('T[0-9]+\.png$', image).group()[1:-4]
         relevant_tracks = tracks[time]
         overlay_text(args.in_im + '/' + image, coord=list(relevant_tracks.values()),
