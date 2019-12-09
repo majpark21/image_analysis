@@ -87,6 +87,10 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         shift_coord = [0, 0]
     # Read image file and create drawing object
     im = Image.open(imfile)
+    # If mode is 'P' (8bits+palette)ImageDraw corrupts all the colors on the image, so switch to L (8bits B&W)
+    # see http://effbot.org/imagingbook/concepts.htm#mode
+    if im.mode == 'P':
+        im = im.convert('L')
     imdraw = ImageDraw.Draw(im)
     # Set defaults
     if output is None:
