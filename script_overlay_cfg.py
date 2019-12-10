@@ -80,6 +80,23 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         overlay_text('path/to/image.jpg', [(40,10), (80,120)], ['1st coords', '2nd coords'], font=myfont)
 
     """
+
+    def check_color_format(mode, color):
+        """Check if color is properly formatted for the image mode (L or RGB only)"""
+        if mode == 'L':
+            try:
+                color_check = isinstance(color, int) and (0 <= color <= 255)
+            except:
+                raise ValueError('For 8 bits grayscale (image mode "L"), color must be an integer between 0 and 255.')
+        elif mode == 'RGB':
+            try:
+                color_check = isinstance(color, tuple) and len(color) == 3 and all([0 <= i <= 255 for i in color])
+            except:
+                raise ValueError('For 8-bits RGB images color must be a 3-tuple of integers between 0 and 255.')
+        if not color_check:
+            error_message = 'For 8-bits grayscale (image mode "L"), color must be an integer between 0 and 255.' if mode == 'L' else 'For RGB images color must be a 3-tuple of integers between 0 and 255.'
+            raise ValueError(error_message)
+
     if type(coord) != list or type(text) != list:
         raise TypeError('coord and text must be lists')
     if len(coord) != len(text):
@@ -88,10 +105,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         shift_coord = [0, 0]
     # Read image file and create drawing object
     im = Image.open(imfile)
-    # If mode is 'P' (8bits+palette)ImageDraw corrupts all the colors on the image, so switch to L (8bits B&W)
+    # If mode is 'P' (8bits + palette, common for imagej export) font color is bound to the palette,
+    # usually not desirable, go to RGB (e.g. intensity 255 in 8 bits with red mapping renders a red font instead of white)
     # see http://effbot.org/imagingbook/concepts.htm#mode
     if im.mode == 'P':
-        im = im.convert('L')
+        im = im.convert('RGB')
+    assert im.mode == 'L' or im.mode == 'RGB'
     imdraw = ImageDraw.Draw(im)
     # Set defaults
     if output is None:
@@ -100,8 +119,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         font = ImageFont.truetype(font='arial', size=12)
     if color is None:
         # Default to black for grayscale('L') or RGB
-        default_col = {'L': 0, 'RGB': (0, 0, 0)}
+        default_col = {'L': 255, 'RGB': (255, 255, 255)}
         color = default_col[im.mode]
+    elif isinstance(color, list):  # as provided by argparse
+        color = tuple(color)
+    check_color_format(im.mode, color)
+
     # Add text and save
     coord = [(i[0]+shift_coord[0], i[1]+shift_coord[1]) for i in coord]
     for xy, txt in zip(coord, text):
@@ -127,6 +150,10 @@ def parseArguments_overlay():
                         default=None)
     parser.add_argument('-o','--in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str,
                         default=None)
+    parser.add_argument('-f', '--font_color', help='Font color of the overlaid text. Must be an integer (resp. a '
+                                                   '3-tuple of integers) between 0 and 255 if the image if 8-bits'
+                                                   ' grayscale (resp. 8-bits RGB). Default to white.', type=int,
+                        default=None, nargs='+')
     parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
                         default=None)
     parser.add_argument('-i', '--id', help='Name of track ID column in _tracks.csv file.', type=str,
@@ -261,5 +288,5 @@ if __name__ == "__main__":
         time = re.search('T[0-9]+\.png$', image).group()[1:-4]
         relevant_tracks = tracks[time]
         overlay_text(args.in_im + '/' + image, coord=list(relevant_tracks.values()),
-                     text=list(relevant_tracks.keys()), color=(255, 255, 255), output=args.in_out + '/ovl_' + image,
+                     text=list(relevant_tracks.keys()), color=args.font_color, output=args.in_out + '/ovl_' + image,
                      shift_coord=args.shift, font=myfont)
