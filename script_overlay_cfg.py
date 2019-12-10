@@ -182,13 +182,15 @@ def parseArguments_overlay():
               'id': 'column_trackid',
               'xpos': 'column_posx',
               'ypos': 'column_posy',
-              'shift': 'overlay_shift'}
+              'shift': 'overlay_shift',
+              'font_color': 'overlay_color'}
     if args.config is not None:
         # save params provided by command line to overwrite config params, vars(): as dictionary
         args_cmd = copy.deepcopy(vars(args))
         args_cfg = read_config(args.config)
         args = {}
         shift_flag = False  # If shift is provided by config file, need to convert string to tuple
+        shift_color = False  # If color is provided by config file, need to convert string to tuple, integer or None
         # Remove unused parameters
         entriesToRemove = ('file_cpout', 'file_suffix_1line', 'column_well', 'column_site', 'column_objnum',
                            'min_track_length')
@@ -206,11 +208,18 @@ def parseArguments_overlay():
                 args[key] = args_cfg[lookup[key]]
                 if key == 'shift':
                     shift_flag = True
+                elif key =='font_color':
+                    shift_color = True
 
         # Convert from string to tuple if provided by config file
         if shift_flag:
             from ast import literal_eval
             args['shift'] = literal_eval(args['shift'])
+
+        # Convert from string to None, tuple or integer if provided by config file
+        if shift_color:
+            from ast import literal_eval
+            args['font_color'] = literal_eval(args['font_color'])
 
         # Make dictionary entries indexable with .XXX notation, consistent with parser object
         class Struct:
