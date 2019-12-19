@@ -58,7 +58,7 @@ def read_csv_track(csvfi, time_col, id_col, xpos_col, ypos_col):
 # ---------------------------------
 
 
-def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, color=None, show=False):
+def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, color=-1, show=False):
     """"Read image file, add text at specified positions and save.
 
     Args:
@@ -69,7 +69,7 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         shift_coord (list of 2 int): Shift for text.
         font (ImageFont object, optional): Font of text. Defaults to arial, 12pt (Windows only).
         color (n-tuple, optional): Color of text. Should have same length as the number of channels in image. Defaults
-        to black.
+        to white. Can also pass -1 for default.
         show (bool, optional): Whether to display the annotated image. Defaults to False.
     Returns:
         None
@@ -116,12 +116,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         output = 'ovl_'+imfile
     if font is None:
         font = ImageFont.truetype(font='arial', size=12)
-    if color is None:
+    if isinstance(color, list):  # as provided by argparse
+        color = tuple(color)
+    if color in [-1, (-1,), (-1,-1,-1), '-1', '(-1,)', '(-1,-1,-1)']:
         # Default to white for grayscale('L') or RGB
         default_col = {'L': 255, 'RGB': (255, 255, 255)}
         color = default_col[im.mode]
-    elif isinstance(color, list):  # as provided by argparse
-        color = tuple(color)
     check_color_format(im.mode, color)
 
     # Add text and save
@@ -152,10 +152,11 @@ def parseArguments_overlay():
                         default=None, nargs='?')
 
     # Optional arguments
-    parser.add_argument('-f', '--font_color', help='Font color of the overlaid text. Must be an integer (resp. a '
-                                                   '3-tuple of integers) between 0 and 255 if the image if 8-bits'
-                                                   ' grayscale (resp. 8-bits RGB). Default to white.', type=int,
-                        default=None, nargs='+')
+    parser.add_argument('-f', '--font_color', help='Font color of the overlaid text. Must be an integer (resp. a'
+                                                   ' 3-tuple of integers) between 0 and 255 if the image if 8-bits'
+                                                   ' grayscale (resp. 8-bits RGB). Default to white. Can also pass -1'
+                                                   ' to use default color.', type=int,
+                        default=-1, nargs='+')
     parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
                         default='Image_Metadata_T')
     parser.add_argument('-i', '--id', help='Name of track ID column in _tracks.csv file.', type=str,

@@ -70,7 +70,7 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         shift_coord (list of 2 int): Shift for text.
         font (ImageFont object, optional): Font of text. Defaults to arial, 12pt (Windows only).
         color (n-tuple, optional): Color of text. Should have same length as the number of channels in image. Defaults
-        to black.
+        to white. Can also pass -1 for default.
         show (bool, optional): Whether to display the annotated image. Defaults to False.
     Returns:
         None
@@ -117,12 +117,12 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
         output = 'ovl_'+imfile
     if font is None:
         font = ImageFont.truetype(font='arial', size=12)
-    if color is None:
-        # Default to black for grayscale('L') or RGB
+    if isinstance(color, list):  # as provided by argparse
+        color = tuple(color)
+    if color in [-1, (-1,), (-1,-1,-1), '-1', '(-1,)', '(-1,-1,-1)']:
+        # Default to white for grayscale('L') or RGB
         default_col = {'L': 255, 'RGB': (255, 255, 255)}
         color = default_col[im.mode]
-    elif isinstance(color, list):  # as provided by argparse
-        color = tuple(color)
     check_color_format(im.mode, color)
 
     # Add text and save
@@ -137,7 +137,7 @@ def overlay_text(imfile, coord, text, output=None, shift_coord=None, font=None, 
 # -----------------------------
 
 
-def parseArguments_overlay():
+def parseArguments_overlay_cfg():
     # Create argument parser
     parser = argparse.ArgumentParser(description='Overlay track labels on top of images using LAP output.')
 
@@ -150,10 +150,11 @@ def parseArguments_overlay():
                         default=None)
     parser.add_argument('-o','--in_out', help='Subfolder of "in_wd", annotated images will be saved there.', type=str,
                         default=None)
-    parser.add_argument('-f', '--font_color', help='Font color of the overlaid text. Must be an integer (resp. a '
-                                                   '3-tuple of integers) between 0 and 255 if the image if 8-bits'
-                                                   ' grayscale (resp. 8-bits RGB). Default to white.', type=int,
-                        default=None, nargs='+')
+    parser.add_argument('-f', '--font_color', help='Font color of the overlaid text. Must be an integer (resp. a'
+                                                   ' 3-tuple of integers) between 0 and 255 if the image if 8-bits'
+                                                   ' grayscale (resp. 8-bits RGB). Default to white. Can also pass -1'
+                                                   ' to use default color.', type=int,
+                        default=-1, nargs='+')
     parser.add_argument('-t', '--time', help='Name of time column in _tracks.csv file.', type=str,
                         default=None)
     parser.add_argument('-i', '--id', help='Name of track ID column in _tracks.csv file.', type=str,
@@ -190,7 +191,7 @@ def parseArguments_overlay():
         args_cfg = read_config(args.config)
         args = {}
         shift_flag = False  # If shift is provided by config file, need to convert string to tuple
-        shift_color = False  # If color is provided by config file, need to convert string to tuple, integer or None
+        color_flag = False  # If color is provided by config file, need to convert string to tuple, integer or None
         # Remove unused parameters
         entriesToRemove = ('file_cpout', 'file_suffix_1line', 'column_well', 'column_site', 'column_objnum',
                            'min_track_length')
@@ -209,15 +210,15 @@ def parseArguments_overlay():
                 if key == 'shift':
                     shift_flag = True
                 elif key =='font_color':
-                    shift_color = True
+                    color_flag = True
 
         # Convert from string to tuple if provided by config file
         if shift_flag:
             from ast import literal_eval
             args['shift'] = literal_eval(args['shift'])
 
-        # Convert from string to None, tuple or integer if provided by config file
-        if shift_color:
+        # Convert from string to tuple or integer if provided by config file
+        if color_flag:
             from ast import literal_eval
             args['font_color'] = literal_eval(args['font_color'])
 
@@ -268,7 +269,7 @@ if __name__ == "__main__":
                       'You can use the lines right (Windows and Linux) above as a template.')
 
     # Read arguments
-    args = parseArguments_overlay()
+    args = parseArguments_overlay_cfg()
 
     # Raw print arguments
     print("You are running the script with arguments: ")
